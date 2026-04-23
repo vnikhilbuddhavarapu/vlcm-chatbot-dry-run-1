@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Chatbot" />
+    <link rel="icon" href="workersai.webp" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f5f5f5;
+        --panel: rgba(255, 255, 255, 0.88);
+        --panel-border: rgba(15, 23, 42, 0.08);
+        --text: #111827;
+        --text-muted: #6b7280;
+        --assistant-bubble: #f3f4f6;
+        --user-bubble: #111827;
+        --user-text: #ffffff;
+        --input-bg: #ffffff;
+        --notice-text: #991b1b;
+        --notice-border: #fecaca;
+        --notice-bg: #fef2f2;
+        --danger-soft: #fef2f2;
+        --warning-soft: #fffbeb;
+        --info-soft: #f9fafb;
+        --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        line-height: 1.5;
+        color: var(--text);
+        min-height: 100vh;
+        background: var(--page);
+        padding: 16px;
+        overflow: hidden;
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+      }
+
+      .app-shell {
+        width: min(960px, 100%);
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 32px);
+      }
+
+      .app-header {
+        padding: 20px 24px 14px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-bottom: 0;
+        border-radius: 24px 24px 0 0;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }
+
+      .header-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+      }
+
+      .header-copy p {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+      }
+
+      .chat-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-top: 0;
+        border-radius: 0 0 24px 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+      }
+
+      .status-banner {
+        display: none;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .status-banner[data-tone="info"] {
+        background: var(--info-soft);
+      }
+
+      .status-banner[data-tone="warning"] {
+        background: var(--warning-soft);
+      }
+
+      .status-banner[data-tone="danger"] {
+        background: var(--danger-soft);
+      }
+
+      .status-copy {
+        display: grid;
+        gap: 4px;
+      }
+
+      .status-copy strong {
+        font-size: 0.95rem;
+      }
+
+      .status-copy span {
+        color: var(--text-muted);
+        font-size: 0.92rem;
+      }
+
+      .status-dismiss {
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
+        font-size: 1.1rem;
+      }
+
+      .chat-messages {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 20px 24px;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(107, 114, 128, 0.35) transparent;
+      }
+
+      .chat-messages::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: rgba(107, 114, 128, 0.28);
+        border-radius: 999px;
+        border: 3px solid transparent;
+        background-clip: padding-box;
+      }
+
+      .chat-messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .message-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+      }
+
+      .message-row.user {
+        justify-content: flex-end;
+      }
+
+      .message-avatar {
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        background: #f3f4f6;
+      }
+
+      .message-row.user .message-avatar {
+        background: #e5e7eb;
+      }
+
+      .message-card {
+        max-width: min(780px, 82%);
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: var(--assistant-bubble);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+      }
+
+      .message-row.user .message-card {
+        background: var(--user-bubble);
+        border-color: rgba(17, 24, 39, 0.06);
+        color: var(--user-text);
+      }
+
+      .message-row.notice .message-card {
+        max-width: min(780px, 100%);
+        background: #fafafa;
+        border-style: solid;
+      }
+
+      .message-row.notice[data-tone="danger"] .message-card {
+        background: var(--notice-bg);
+        border-color: var(--notice-border);
+        color: var(--notice-text);
+      }
+
+      .message-row.notice[data-tone="danger"] .message-meta {
+        color: var(--notice-text);
+      }
+
+      .message-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .message-row.user .message-meta {
+        color: rgba(255, 255, 255, 0.74);
+      }
+
+      .message-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 0.96rem;
+        line-height: 1.6;
+      }
+
+      .message-text.empty::after {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-left: 6px;
+        border-radius: 999px;
+        background: currentColor;
+        animation: pulse 1s infinite ease-in-out;
+      }
+
+      .composer-shell {
+        display: grid;
+        gap: 14px;
+        padding: 16px 20px 20px;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+        background: var(--panel);
+      }
+
+      .composer-meta {
+        display: flex;
+        justify-content: flex-end;
+        font-size: 0.84rem;
+        color: var(--text-muted);
+      }
+
+      .typing-indicator {
+        display: none;
+        font-size: 0.84rem;
+        color: var(--text-muted);
+      }
+
+      .typing-indicator.visible {
+        display: block;
+      }
+
+      .message-input {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 18px;
+        background: var(--input-bg);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+
+      #user-input {
+        flex: 1;
+        min-height: 52px;
+        max-height: 240px;
+        padding: 4px 2px;
+        background: transparent;
+        border: 0;
+        outline: none;
+        resize: none;
+        color: var(--text);
+      }
+
+      #user-input::placeholder {
+        color: #9ca3af;
+      }
+
+      #send-button {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 96px;
+        height: 48px;
+        padding: 0 18px;
+        border-radius: 14px;
+        background: #111827;
+        color: #ffffff;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.18s ease;
+      }
+
+      #send-button:hover {
+        opacity: 0.9;
+      }
+
+      #send-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .footer {
+        padding: 0 4px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.88rem;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.35;
+          transform: scale(0.9);
+        }
+
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @media (max-width: 900px) {
+        body {
+          padding: 16px;
+        }
+
+        .app-header,
+        .chat-messages,
+        .composer-shell {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+
+        .message-card {
+          max-width: 92%;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app-shell {
+          height: calc(100vh - 32px);
+        }
+
+        .chat-messages {
+          padding-top: 16px;
+          padding-bottom: 16px;
+        }
+
+        .message-row {
+          gap: 10px;
+        }
+
+        .message-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 12px;
+        }
+
+        .message-card {
+          max-width: calc(100% - 42px);
+          padding: 14px 15px;
+          border-radius: 18px;
+        }
+
+        .message-input {
+          align-items: stretch;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="header-copy">
+          <h1 id="app-title">Chatbot</h1>
+          <p id="app-subtitle">Ask anything.</p>
+        </div>
+      </header>
+
+      <main class="chat-shell">
+        <div class="status-banner" id="status-banner" hidden>
+          <div class="status-copy">
+            <strong id="status-title"></strong>
+            <span id="status-message"></span>
+          </div>
+          <button
+            class="status-dismiss"
+            id="status-dismiss"
+            aria-label="Dismiss status"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <div class="composer-shell">
+          <div class="typing-indicator" id="typing-indicator">
+            Assistant is responding…
+          </div>
+
+          <div class="message-input">
+            <textarea
+              id="user-input"
+              placeholder="Type a message…"
+              rows="1"
+              autofocus
+            ></textarea>
+            <button id="send-button">Send message</button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Chat app script -->
+    <script src="chat.js"></script>
+  </body>
+</html>
