@@ -9,7 +9,7 @@ export const APP_CONFIG = {
     "You are a helpful, concise, and trustworthy assistant. Provide accurate answers, keep the tone warm, friendly, and professional, and say clearly when you are uncertain.",
   maxTokens: 4096,
   gateway: {
-    id: "",
+    id: "vlcm-chatbot",
     skipCache: false,
     cacheTtl: 3600,
   },
